@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import AppHeader from '@/components/AppHeader.vue'
 
 const router = useRouter()
 
@@ -50,7 +51,6 @@ const posts = ref([
 
 const selectedPost = ref(null)
 const showModal = ref(false)
-const showLogoutModal = ref(false)
 
 const openPost = (post) => {
   selectedPost.value = post
@@ -62,19 +62,6 @@ const closeModal = () => {
   selectedPost.value = null
 }
 
-const handleLogout = () => {
-  showLogoutModal.value = true
-}
-
-const confirmLogout = () => {
-  showLogoutModal.value = false
-  router.push('/login')
-}
-
-const goToMain = () => {
-  router.push('/main')
-}
-
 const goToWrite = () => {
   router.push('/board/write')
 }
@@ -83,30 +70,7 @@ const goToWrite = () => {
 <template>
   <div class="board-container">
     <!-- 상단 네비게이션 -->
-    <header class="header">
-      <div class="header-content">
-        <div class="logo" @click="goToMain">
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="20" cy="20" r="18" stroke="#4CAF50" stroke-width="2"/>
-            <path d="M13 20 L18 25 L28 14" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span class="logo-text">냠냠 코치</span>
-        </div>
-
-        <nav class="nav-menu">
-          <router-link to="/main" class="nav-item">대시보드</router-link>
-          <router-link to="/diet" class="nav-item">식단 관리</router-link>
-          <router-link to="/board" class="nav-item active">게시판</router-link>
-          <router-link to="/challenge" class="nav-item">챌린지</router-link>
-          <router-link to="/mypage" class="nav-item">마이페이지</router-link>
-        </nav>
-
-        <div class="user-menu">
-          <span class="username">홍길동님</span>
-          <button @click="handleLogout" class="logout-btn">로그아웃</button>
-        </div>
-      </div>
-    </header>
+    <AppHeader active-page="board" />
 
     <!-- 메인 콘텐츠 -->
     <main class="main-content">
@@ -209,23 +173,6 @@ const goToWrite = () => {
         </div>
       </div>
     </div>
-
-    <!-- 로그아웃 확인 모달 -->
-    <div v-if="showLogoutModal" class="modal-overlay" @click="showLogoutModal = false">
-      <div class="modal-content logout-modal" @click.stop>
-        <div class="modal-header">
-          <h2 class="modal-title">로그아웃</h2>
-          <button class="modal-close" @click="showLogoutModal = false">✕</button>
-        </div>
-        <div class="modal-body">
-          <p class="modal-message">로그아웃 하시겠습니까?</p>
-        </div>
-        <div class="modal-footer">
-          <button class="modal-btn cancel-btn" @click="showLogoutModal = false">취소</button>
-          <button class="modal-btn logout-confirm-btn" @click="confirmLogout">로그아웃</button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -233,85 +180,6 @@ const goToWrite = () => {
 .board-container {
   min-height: 100vh;
   background-color: #F5F7FA;
-}
-
-/* 헤더 (동일) */
-.header {
-  background: #FFFFFF;
-  border-bottom: 1px solid #E0E0E0;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.header-content {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 16px 40px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-}
-
-.logo-text {
-  font-size: 20px;
-  font-weight: 700;
-  color: #333333;
-}
-
-.nav-menu {
-  display: flex;
-  gap: 32px;
-}
-
-.nav-item {
-  color: #666666;
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.3s ease;
-  padding: 8px 0;
-  border-bottom: 2px solid transparent;
-}
-
-.nav-item:hover,
-.nav-item.active {
-  color: #4CAF50;
-  border-bottom-color: #4CAF50;
-}
-
-.user-menu {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.username {
-  font-size: 14px;
-  color: #333333;
-  font-weight: 500;
-}
-
-.logout-btn {
-  padding: 8px 16px;
-  background: transparent;
-  border: 1px solid #E0E0E0;
-  border-radius: 6px;
-  color: #666666;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.logout-btn:hover {
-  border-color: #4CAF50;
-  color: #4CAF50;
 }
 
 /* 메인 콘텐츠 */
@@ -694,72 +562,6 @@ const goToWrite = () => {
   font-size: 14px;
   color: #666666;
   line-height: 1.6;
-}
-
-/* 로그아웃 모달 */
-.logout-modal {
-  max-width: 400px;
-}
-
-.logout-modal .modal-body {
-  padding: 32px 28px;
-  text-align: center;
-}
-
-.logout-modal .modal-message {
-  font-size: 16px;
-  color: #333333;
-  line-height: 1.6;
-  margin: 8px 0;
-}
-
-.logout-modal .modal-footer {
-  padding: 24px 28px;
-  border-top: 1px solid #E0E0E0;
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-}
-
-.logout-modal .modal-btn {
-  padding: 12px 32px;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  min-width: 100px;
-}
-
-.logout-modal .cancel-btn {
-  background: #F5F7FA;
-  border: 1px solid #E0E0E0;
-  color: #666666;
-}
-
-.logout-modal .cancel-btn:hover {
-  background: #E8EAF0;
-  border-color: #BDBDBD;
-  color: #333333;
-}
-
-.logout-confirm-btn {
-  background: #4CAF50;
-  border: none;
-  color: #FFFFFF;
-  padding: 12px 32px;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  min-width: 100px;
-}
-
-.logout-confirm-btn:hover {
-  background: #45A049;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
 }
 
 /* 반응형 */

@@ -1,49 +1,42 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import AppHeader from '@/components/AppHeader.vue'
 
 const router = useRouter()
+const route = useRoute()
 
-// 더미 데이터 - 사용자 정보
+// URL에서 받은 사용자 ID
+const userId = ref(null)
+
+// 더미 데이터 - 다른 사용자 정보
 const userInfo = ref({
-  name: '홍길동',
-  nickname: '건강러버',
-  email: 'test@yamyam.com'
+  name: '이영희',
+  nickname: '헬스매니아',
+  email: 'younghee@yamyam.com'
 })
+
+// 팔로우 상태
+const isFollowing = ref(false)
 
 // 더미 데이터 - 팔로워/팔로잉 수
 const followStats = ref({
-  followers: 4,  // 나를 팔로우하는 사람 수
-  following: 3   // 내가 팔로우하는 사람 수
+  followers: 12,
+  following: 8
 })
 
-// 더미 데이터 - 신체 정보 이력
+// 더미 데이터 - 신체 정보 이력 (공개 설정된 경우만 표시)
 const bodySpecs = ref([
-  { id: 1, height: 175, weight: 75, age: 28, gender: '남성', date: '2025-01-01' },
-  { id: 2, height: 175, weight: 73, age: 28, gender: '남성', date: '2025-01-08' },
-  { id: 3, height: 175, weight: 72, age: 28, gender: '남성', date: '2025-01-15' },
-  { id: 4, height: 175, weight: 70, age: 28, gender: '남성', date: '2025-01-22' },
-  { id: 5, height: 175, weight: 69, age: 28, gender: '남성', date: '2025-01-29' },
+  { id: 1, height: 165, weight: 58, age: 25, gender: '여성', date: '2025-01-01' },
+  { id: 2, height: 165, weight: 57, age: 25, gender: '여성', date: '2025-01-08' },
+  { id: 3, height: 165, weight: 56, age: 25, gender: '여성', date: '2025-01-15' },
+  { id: 4, height: 165, weight: 55, age: 25, gender: '여성', date: '2025-01-22' },
+  { id: 5, height: 165, weight: 54, age: 25, gender: '여성', date: '2025-01-29' },
 ])
-
-// 모달 상태
-const showAddModal = ref(false)
-const showDeleteModal = ref(false)
-const deleteTargetId = ref(null)
 
 // 토스트
 const showToast = ref(false)
 const toastMessage = ref('')
-
-// 신체 정보 폼
-const newBodySpec = ref({
-  height: '',
-  weight: '',
-  age: '',
-  gender: '남성',
-  date: new Date().toISOString().split('T')[0]
-})
 
 // 최신 신체 정보
 const latestBodySpec = computed(() => {
@@ -127,48 +120,53 @@ const yAxisTicks = computed(() => {
   return ticks.reverse()
 })
 
-// 신체 정보 추가
-const handleAddBodySpec = () => {
-  if (!newBodySpec.value.height || !newBodySpec.value.weight || !newBodySpec.value.age) {
-    displayToast('모든 필드를 입력해주세요')
-    return
+// 마운트 시 사용자 ID 가져오기
+onMounted(() => {
+  userId.value = route.params.id
+  // 실제로는 API 호출로 사용자 정보 로드
+  loadUserProfile(userId.value)
+})
+
+const loadUserProfile = (id) => {
+  // 더미 데이터 - 실제로는 API 호출
+  const users = {
+    1: { name: '김철수', nickname: 'chulsoo', email: 'chulsoo@yamyam.com', followers: 8, following: 5 },
+    2: { name: '이영희', nickname: 'younghee', email: 'younghee@yamyam.com', followers: 12, following: 8 },
+    3: { name: '박지민', nickname: 'jimin', email: 'jimin@yamyam.com', followers: 15, following: 10 },
+    4: { name: '최민수', nickname: 'minsu', email: 'minsu@yamyam.com', followers: 6, following: 12 },
+    5: { name: '정수현', nickname: 'suhyun', email: 'suhyun@yamyam.com', followers: 20, following: 15 },
+    6: { name: '강다은', nickname: 'daeun', email: 'daeun@yamyam.com', followers: 9, following: 7 },
+    7: { name: '윤서준', nickname: 'seojun', email: 'seojun@yamyam.com', followers: 11, following: 9 },
+    8: { name: '임하늘', nickname: 'haneul', email: 'haneul@yamyam.com', followers: 14, following: 11 }
   }
 
-  bodySpecs.value.push({
-    id: Date.now(),
-    height: parseInt(newBodySpec.value.height),
-    weight: parseInt(newBodySpec.value.weight),
-    age: parseInt(newBodySpec.value.age),
-    gender: newBodySpec.value.gender,
-    date: newBodySpec.value.date
-  })
-
-  showAddModal.value = false
-  newBodySpec.value = {
-    height: '',
-    weight: '',
-    age: '',
-    gender: '남성',
-    date: new Date().toISOString().split('T')[0]
+  if (users[id]) {
+    userInfo.value = {
+      name: users[id].name,
+      nickname: users[id].nickname,
+      email: users[id].email
+    }
+    followStats.value = {
+      followers: users[id].followers,
+      following: users[id].following
+    }
   }
 
-  displayToast('신체 정보가 추가되었습니다')
+  // 팔로우 상태 확인 (더미 - 실제로는 API에서)
+  const myFollowing = [2, 5]
+  isFollowing.value = myFollowing.includes(parseInt(id))
 }
 
-// 신체 정보 삭제
-const deleteBodySpec = (id) => {
-  deleteTargetId.value = id
-  showDeleteModal.value = true
-}
-
-const confirmDelete = () => {
-  const index = bodySpecs.value.findIndex(b => b.id === deleteTargetId.value)
-  if (index !== -1) {
-    bodySpecs.value.splice(index, 1)
-    displayToast('신체 정보가 삭제되었습니다')
+// 팔로우/언팔로우
+const toggleFollow = () => {
+  isFollowing.value = !isFollowing.value
+  if (isFollowing.value) {
+    followStats.value.followers++
+    displayToast(`${userInfo.value.name}님을 팔로우했습니다.`)
+  } else {
+    followStats.value.followers--
+    displayToast(`${userInfo.value.name}님을 언팔로우했습니다.`)
   }
-  showDeleteModal.value = false
-  deleteTargetId.value = null
 }
 
 // 토스트
@@ -179,28 +177,27 @@ const displayToast = (message) => {
     showToast.value = false
   }, 3000)
 }
-
-// 모달 열기
-const openAddModal = () => {
-  if (latestBodySpec.value) {
-    newBodySpec.value.height = latestBodySpec.value.height.toString()
-    newBodySpec.value.age = latestBodySpec.value.age.toString()
-    newBodySpec.value.gender = latestBodySpec.value.gender
-  }
-  showAddModal.value = true
-}
 </script>
 
 <template>
-  <div class="mypage-container">
+  <div class="profile-container">
     <!-- 상단 네비게이션 -->
-    <AppHeader active-page="mypage" />
+    <AppHeader active-page="" />
 
     <!-- 메인 콘텐츠 -->
     <main class="main-content">
       <div class="content-wrapper">
         <div class="page-header">
-          <h1 class="page-title">마이페이지</h1>
+          <div>
+            <button @click="router.back()" class="back-btn">← 돌아가기</button>
+            <h1 class="page-title">{{ userInfo.name }}님의 프로필</h1>
+          </div>
+          <button
+            @click="toggleFollow"
+            :class="['follow-action-btn', { 'following': isFollowing }]"
+          >
+            {{ isFollowing ? '언팔로우' : '팔로우' }}
+          </button>
         </div>
 
         <!-- 그리드 레이아웃 -->
@@ -208,7 +205,7 @@ const openAddModal = () => {
           <!-- 사용자 정보 카드 -->
           <div class="card user-info-card">
             <div class="card-header">
-              <h2 class="card-title">내 정보</h2>
+              <h2 class="card-title">정보</h2>
             </div>
             <div class="user-info">
               <div class="info-row">
@@ -227,12 +224,12 @@ const openAddModal = () => {
 
             <!-- 팔로워/팔로잉 섹션 -->
             <div class="follow-section">
-              <div class="follow-item" @click="router.push('/followers')">
+              <div class="follow-item" @click="router.push(`/user/${userId}/followers`)">
                 <div class="follow-count">{{ followStats.followers }}</div>
                 <div class="follow-label">팔로워</div>
               </div>
               <div class="follow-divider"></div>
-              <div class="follow-item" @click="router.push('/following')">
+              <div class="follow-item" @click="router.push(`/user/${userId}/following`)">
                 <div class="follow-count">{{ followStats.following }}</div>
                 <div class="follow-label">팔로잉</div>
               </div>
@@ -243,7 +240,6 @@ const openAddModal = () => {
           <div class="card body-info-card">
             <div class="card-header">
               <h2 class="card-title">현재 신체 정보</h2>
-              <button class="add-btn" @click="openAddModal">+ 기록 추가</button>
             </div>
             <div v-if="latestBodySpec" class="body-info">
               <div class="body-stats">
@@ -274,8 +270,7 @@ const openAddModal = () => {
               </div>
             </div>
             <div v-else class="empty-body-info">
-              <p class="empty-text">신체 정보가 없습니다</p>
-              <button class="add-btn-large" @click="openAddModal">+ 신체 정보 추가</button>
+              <p class="empty-text">공개된 신체 정보가 없습니다</p>
             </div>
           </div>
 
@@ -402,106 +397,15 @@ const openAddModal = () => {
                   <span class="history-stat">나이: {{ spec.age }}세</span>
                   <span class="history-stat">성별: {{ spec.gender }}</span>
                 </div>
-                <button class="delete-btn" @click="deleteBodySpec(spec.id)">삭제</button>
               </div>
             </div>
             <div v-else class="empty-history">
-              <p class="empty-text">신체 정보 기록이 없습니다</p>
+              <p class="empty-text">공개된 신체 정보 기록이 없습니다</p>
             </div>
           </div>
         </div>
       </div>
     </main>
-
-    <!-- 신체 정보 추가 모달 -->
-    <div v-if="showAddModal" class="modal-overlay" @click="showAddModal = false">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h2 class="modal-title">신체 정보 추가</h2>
-          <button class="modal-close" @click="showAddModal = false">✕</button>
-        </div>
-        <div class="modal-body">
-          <form @submit.prevent="handleAddBodySpec" class="body-form">
-            <div class="form-group">
-              <label class="form-label">측정일</label>
-              <input
-                v-model="newBodySpec.date"
-                type="date"
-                class="form-input"
-                required
-              />
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">키 (cm)</label>
-                <input
-                  v-model="newBodySpec.height"
-                  type="number"
-                  placeholder="175"
-                  class="form-input"
-                  required
-                />
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">체중 (kg)</label>
-                <input
-                  v-model="newBodySpec.weight"
-                  type="number"
-                  placeholder="70"
-                  class="form-input"
-                  required
-                />
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">나이</label>
-                <input
-                  v-model="newBodySpec.age"
-                  type="number"
-                  placeholder="25"
-                  class="form-input"
-                  required
-                />
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">성별</label>
-                <select v-model="newBodySpec.gender" class="form-input">
-                  <option value="남성">남성</option>
-                  <option value="여성">여성</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="form-actions">
-              <button type="button" class="cancel-btn" @click="showAddModal = false">취소</button>
-              <button type="submit" class="submit-btn">추가</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <!-- 삭제 확인 모달 -->
-    <div v-if="showDeleteModal" class="modal-overlay" @click="showDeleteModal = false">
-      <div class="modal-content small-modal" @click.stop>
-        <div class="modal-header">
-          <h2 class="modal-title">신체 정보 삭제</h2>
-          <button class="modal-close" @click="showDeleteModal = false">✕</button>
-        </div>
-        <div class="modal-body">
-          <p class="modal-message">이 기록을 삭제하시겠습니까?</p>
-        </div>
-        <div class="modal-footer">
-          <button class="modal-btn cancel-btn-modal" @click="showDeleteModal = false">취소</button>
-          <button class="modal-btn delete-btn" @click="confirmDelete">삭제</button>
-        </div>
-      </div>
-    </div>
 
     <!-- 토스트 메시지 -->
     <div v-if="showToast" class="toast-message">
@@ -512,7 +416,7 @@ const openAddModal = () => {
 </template>
 
 <style scoped>
-.mypage-container {
+.profile-container {
   min-height: 100vh;
   background-color: #F5F7FA;
 }
@@ -529,12 +433,65 @@ const openAddModal = () => {
 
 .page-header {
   margin-bottom: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.back-btn {
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid #E0E0E0;
+  border-radius: 6px;
+  color: #666666;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 12px;
+}
+
+.back-btn:hover {
+  background: #F5F7FA;
+  border-color: #999999;
+  color: #333333;
 }
 
 .page-title {
   font-size: 32px;
   font-weight: 700;
   color: #333333;
+}
+
+.follow-action-btn {
+  padding: 12px 32px;
+  background: #4CAF50;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.follow-action-btn:hover {
+  background: #45A049;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.follow-action-btn.following {
+  background: #FFFFFF;
+  color: #666666;
+  border: 2px solid #E0E0E0;
+}
+
+.follow-action-btn.following:hover {
+  background: #F5F7FA;
+  border-color: #999999;
+  color: #333333;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 /* 그리드 레이아웃 */
@@ -563,22 +520,6 @@ const openAddModal = () => {
   font-size: 20px;
   font-weight: 700;
   color: #333333;
-}
-
-.add-btn {
-  padding: 8px 16px;
-  background: #4CAF50;
-  color: #FFFFFF;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.3s ease;
-}
-
-.add-btn:hover {
-  background: #45A049;
 }
 
 /* 사용자 정보 */
@@ -746,24 +687,6 @@ const openAddModal = () => {
   margin-bottom: 16px;
 }
 
-.add-btn-large {
-  padding: 12px 24px;
-  background: #4CAF50;
-  color: #FFFFFF;
-  border: none;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.add-btn-large:hover {
-  background: #45A049;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-}
-
 /* 그래프 */
 .chart-card {
   grid-column: span 2;
@@ -796,6 +719,10 @@ const openAddModal = () => {
 }
 
 /* 이력 */
+.history-card {
+  grid-column: span 2;
+}
+
 .history-list {
   display: flex;
   flex-direction: column;
@@ -835,23 +762,6 @@ const openAddModal = () => {
 .history-stat {
   font-size: 14px;
   color: #666666;
-}
-
-.delete-btn {
-  padding: 6px 12px;
-  background: transparent;
-  border: 1px solid #F44336;
-  border-radius: 6px;
-  color: #F44336;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.delete-btn:hover {
-  background: #F44336;
-  color: #FFFFFF;
 }
 
 .empty-history {
@@ -960,111 +870,6 @@ const openAddModal = () => {
   color: #333333;
 }
 
-.logout-btn {
-  background: #4CAF50;
-  border: none;
-  color: #FFFFFF;
-}
-
-.logout-btn:hover {
-  background: #45A049;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-}
-
-.delete-btn {
-  background: #F44336;
-  border: none;
-  color: #FFFFFF;
-}
-
-.delete-btn:hover {
-  background: #D32F2F;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
-}
-
-/* 폼 */
-.body-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-
-.form-label {
-  font-size: 14px;
-  font-weight: 600;
-  color: #333333;
-}
-
-.form-input {
-  padding: 12px 16px;
-  border: 1px solid #E0E0E0;
-  border-radius: 8px;
-  font-size: 15px;
-  color: #333333;
-  background: #FFFFFF;
-  transition: border-color 0.3s ease;
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: #4CAF50;
-}
-
-.form-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  margin-top: 12px;
-}
-
-.cancel-btn,
-.submit-btn {
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.cancel-btn {
-  background: #F5F7FA;
-  border: 1px solid #E0E0E0;
-  color: #666666;
-}
-
-.cancel-btn:hover {
-  background: #E8EAF0;
-  border-color: #BDBDBD;
-  color: #333333;
-}
-
-.submit-btn {
-  background: #4CAF50;
-  border: none;
-  color: #FFFFFF;
-}
-
-.submit-btn:hover {
-  background: #45A049;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-}
-
 /* 토스트 */
 .toast-message {
   position: fixed;
@@ -1118,7 +923,8 @@ const openAddModal = () => {
     grid-template-columns: 1fr;
   }
 
-  .chart-card {
+  .chart-card,
+  .history-card {
     grid-column: span 1;
   }
 

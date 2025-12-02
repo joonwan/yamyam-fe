@@ -17,10 +17,22 @@ const weight = ref('')
 const age = ref('')
 const gender = ref('')
 
+// 토스트
+const showToast = ref(false)
+const toastMessage = ref('')
+
+const displayToast = (message) => {
+  toastMessage.value = message
+  showToast.value = true
+  setTimeout(() => {
+    showToast.value = false
+  }, 3000)
+}
+
 const handleSignup = () => {
   // 비밀번호 확인
   if (password.value !== passwordConfirm.value) {
-    alert('비밀번호가 일치하지 않습니다.')
+    displayToast('비밀번호가 일치하지 않습니다.')
     return
   }
 
@@ -37,8 +49,10 @@ const handleSignup = () => {
   }
 
   console.log('회원가입 데이터:', userData)
-  alert('회원가입이 완료되었습니다!')
-  router.push('/login')
+  displayToast('회원가입이 완료되었습니다!')
+  setTimeout(() => {
+    router.push('/login')
+  }, 500)
 }
 </script>
 
@@ -186,6 +200,14 @@ const handleSignup = () => {
         </div>
       </div>
     </div>
+
+    <!-- Toast Message -->
+    <transition name="slideUp">
+      <div v-if="showToast" class="toast">
+        <span class="toast-icon">✓</span>
+        <span class="toast-message">{{ toastMessage }}</span>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -409,6 +431,59 @@ const handleSignup = () => {
   .input-row {
     flex-direction: column;
     gap: 0;
+  }
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #FFFFFF;
+  padding: 16px 24px;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 1000;
+}
+
+.toast-icon {
+  width: 24px;
+  height: 24px;
+  background: #4CAF50;
+  color: #FFFFFF;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.toast-message {
+  color: #333333;
+  font-weight: 500;
+}
+
+.slideUp-enter-active {
+  animation: slideUp 0.3s ease-out;
+}
+
+.slideUp-leave-active {
+  animation: slideUp 0.3s ease-out reverse;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translate(-50%, 20px);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
   }
 }
 </style>

@@ -10,6 +10,10 @@ import WriteBoardView from '../views/WriteBoardView.vue'
 import BoardDetailView from '../views/BoardDetailView.vue'
 import ChallengeView from '../views/ChallengeView.vue'
 import MyPageView from '../views/MyPageView.vue'
+import FriendsView from '../views/FriendsView.vue'
+import FollowersView from '../views/FollowersView.vue'
+import FollowingView from '../views/FollowingView.vue'
+import UserProfileView from '../views/UserProfileView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -72,6 +76,26 @@ const router = createRouter({
       path: '/mypage',
       name: 'mypage',
       component: MyPageView
+    },
+    {
+      path: '/friends',
+      name: 'friends',
+      component: FriendsView
+    },
+    {
+      path: '/followers',
+      name: 'followers',
+      component: FollowersView
+    },
+    {
+      path: '/following',
+      name: 'following',
+      component: FollowingView
+    },
+    {
+      path: '/user/:id',
+      name: 'user-profile',
+      component: UserProfileView
     }
   ]
 })

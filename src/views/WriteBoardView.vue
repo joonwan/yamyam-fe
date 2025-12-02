@@ -14,6 +14,7 @@ const toastMessage = ref('')
 const showDietModal = ref(false)
 const selectedDiet = ref(null)
 const showPreviewModal = ref(false)
+const showCancelModal = ref(false)
 const contentTextarea = ref(null)
 let imageIdCounter = 0
 
@@ -170,12 +171,15 @@ const handleSubmit = () => {
 // 취소 (게시판으로 돌아가기)
 const handleCancel = () => {
   if (title.value || content.value || images.value.length > 0) {
-    if (confirm('작성 중인 내용이 있습니다. 정말 취소하시겠습니까?')) {
-      router.push('/board')
-    }
+    showCancelModal.value = true
   } else {
     router.push('/board')
   }
+}
+
+const confirmCancel = () => {
+  showCancelModal.value = false
+  router.push('/board')
 }
 
 // 토스트 메시지
@@ -275,6 +279,7 @@ const parsedContent = computed(() => {
           <router-link to="/diet" class="nav-item">식단 관리</router-link>
           <router-link to="/board" class="nav-item active">게시판</router-link>
           <router-link to="/challenge" class="nav-item">챌린지</router-link>
+          <router-link to="/friends" class="nav-item">친구 검색</router-link>
           <router-link to="/mypage" class="nav-item">마이페이지</router-link>
         </nav>
 
@@ -429,6 +434,23 @@ const parsedContent = computed(() => {
         <div class="modal-footer">
           <button class="modal-btn cancel-btn-modal" @click="showLogoutModal = false">취소</button>
           <button class="modal-btn logout-confirm-btn" @click="confirmLogout">로그아웃</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 취소 확인 모달 -->
+    <div v-if="showCancelModal" class="modal-overlay" @click="showCancelModal = false">
+      <div class="modal-content logout-modal" @click.stop>
+        <div class="modal-header">
+          <h2 class="modal-title">작성 취소</h2>
+          <button class="modal-close" @click="showCancelModal = false">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-message">작성 중인 내용이 있습니다. 정말 취소하시겠습니까?</p>
+        </div>
+        <div class="modal-footer">
+          <button class="modal-btn cancel-btn-modal" @click="showCancelModal = false">계속 작성</button>
+          <button class="modal-btn logout-confirm-btn" @click="confirmCancel">취소</button>
         </div>
       </div>
     </div>

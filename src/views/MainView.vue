@@ -1,11 +1,9 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import AppHeader from '@/components/AppHeader.vue'
 
 const router = useRouter()
-
-// 로그아웃 모달
-const showLogoutModal = ref(false)
 
 // 더미 데이터
 const todayMeals = ref([
@@ -34,44 +32,12 @@ const recentPosts = ref([
   { title: '저염식 레시피 추천', author: '요리왕', likes: 18 },
   { title: '간헐적 단식 후기', author: '다이어터', likes: 32 },
 ])
-
-const handleLogout = () => {
-  showLogoutModal.value = true
-}
-
-const confirmLogout = () => {
-  showLogoutModal.value = false
-  router.push('/login')
-}
 </script>
 
 <template>
   <div class="main-container">
     <!-- 상단 네비게이션 -->
-    <header class="header">
-      <div class="header-content">
-        <div class="logo">
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="20" cy="20" r="18" stroke="#4CAF50" stroke-width="2"/>
-            <path d="M13 20 L18 25 L28 14" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span class="logo-text">냠냠 코치</span>
-        </div>
-
-        <nav class="nav-menu">
-          <router-link to="/main" class="nav-item active">대시보드</router-link>
-          <router-link to="/diet" class="nav-item">식단 관리</router-link>
-          <router-link to="/board" class="nav-item">게시판</router-link>
-          <router-link to="/challenge" class="nav-item">챌린지</router-link>
-          <router-link to="/mypage" class="nav-item">마이페이지</router-link>
-        </nav>
-
-        <div class="user-menu">
-          <span class="username">홍길동님</span>
-          <button @click="handleLogout" class="logout-btn">로그아웃</button>
-        </div>
-      </div>
-    </header>
+    <AppHeader active-page="main" />
 
     <!-- 메인 콘텐츠 -->
     <main class="main-content">
@@ -196,23 +162,6 @@ const confirmLogout = () => {
         </div>
       </div>
     </main>
-
-    <!-- 로그아웃 확인 모달 -->
-    <div v-if="showLogoutModal" class="modal-overlay" @click="showLogoutModal = false">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h2 class="modal-title">로그아웃</h2>
-          <button class="modal-close" @click="showLogoutModal = false">✕</button>
-        </div>
-        <div class="modal-body">
-          <p class="modal-message">로그아웃 하시겠습니까?</p>
-        </div>
-        <div class="modal-footer">
-          <button class="modal-btn cancel-btn" @click="showLogoutModal = false">취소</button>
-          <button class="modal-btn confirm-btn" @click="confirmLogout">로그아웃</button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -220,84 +169,6 @@ const confirmLogout = () => {
 .main-container {
   min-height: 100vh;
   background-color: #F5F7FA;
-}
-
-/* 헤더 */
-.header {
-  background: #FFFFFF;
-  border-bottom: 1px solid #E0E0E0;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.header-content {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 16px 40px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.logo-text {
-  font-size: 20px;
-  font-weight: 700;
-  color: #333333;
-}
-
-.nav-menu {
-  display: flex;
-  gap: 32px;
-}
-
-.nav-item {
-  color: #666666;
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.3s ease;
-  padding: 8px 0;
-  border-bottom: 2px solid transparent;
-}
-
-.nav-item:hover,
-.nav-item.active {
-  color: #4CAF50;
-  border-bottom-color: #4CAF50;
-}
-
-.user-menu {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.username {
-  font-size: 14px;
-  color: #333333;
-  font-weight: 500;
-}
-
-.logout-btn {
-  padding: 8px 16px;
-  background: transparent;
-  border: 1px solid #E0E0E0;
-  border-radius: 6px;
-  color: #666666;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.logout-btn:hover {
-  border-color: #4CAF50;
-  color: #4CAF50;
 }
 
 /* 메인 콘텐츠 */
@@ -675,126 +546,8 @@ const confirmLogout = () => {
   font-weight: 600;
 }
 
-/* 모달 */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: #FFFFFF;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 400px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24px 28px;
-  border-bottom: 1px solid #E0E0E0;
-}
-
-.modal-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #333333;
-}
-
-.modal-close {
-  width: 32px;
-  height: 32px;
-  background: transparent;
-  border: none;
-  color: #666666;
-  font-size: 24px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  transition: all 0.3s ease;
-}
-
-.modal-close:hover {
-  background: #F8F9FA;
-  color: #333333;
-}
-
-.modal-body {
-  padding: 32px 28px;
-  text-align: center;
-}
-
-.modal-message {
-  font-size: 16px;
-  color: #333333;
-  line-height: 1.6;
-  margin: 8px 0;
-}
-
-.modal-footer {
-  padding: 24px 28px;
-  border-top: 1px solid #E0E0E0;
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-}
-
-.modal-btn {
-  padding: 12px 32px;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  min-width: 100px;
-}
-
-.cancel-btn {
-  background: #F5F7FA;
-  border: 1px solid #E0E0E0;
-  color: #666666;
-}
-
-.cancel-btn:hover {
-  background: #E8EAF0;
-  border-color: #BDBDBD;
-  color: #333333;
-}
-
-.confirm-btn {
-  background: #4CAF50;
-  border: none;
-  color: #FFFFFF;
-}
-
-.confirm-btn:hover {
-  background: #45A049;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
-}
-
 /* 반응형 */
 @media (max-width: 968px) {
-  .header-content {
-    padding: 16px 20px;
-  }
-
-  .nav-menu {
-    display: none;
-  }
-
   .main-content {
     padding: 20px;
   }

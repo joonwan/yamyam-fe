@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import AppHeader from '@/components/AppHeader.vue'
 
 const router = useRouter()
 
@@ -57,25 +58,12 @@ const availableChallenges = ref([
 // 모달 상태
 const showDetailModal = ref(false)
 const showJoinModal = ref(false)
-const showLogoutModal = ref(false)
+const showQuitModal = ref(false)
 const selectedChallenge = ref(null)
 
 // 토스트 메시지
 const showToast = ref(false)
 const toastMessage = ref('')
-
-const handleLogout = () => {
-  showLogoutModal.value = true
-}
-
-const confirmLogout = () => {
-  showLogoutModal.value = false
-  router.push('/login')
-}
-
-const goToMain = () => {
-  router.push('/main')
-}
 
 // 토스트 메시지 표시
 const displayToast = (message) => {
@@ -127,55 +115,38 @@ const confirmJoin = () => {
 
 // 포기하기
 const quitChallenge = (challenge) => {
-  if (confirm(`'${challenge.title}' 챌린지를 포기하시겠습니까?`)) {
-    // 참여 중인 챌린지에서 제거
-    const index = myChallenges.value.findIndex(c => c.id === challenge.id)
-    if (index !== -1) {
-      myChallenges.value.splice(index, 1)
-    }
+  selectedChallenge.value = challenge
+  showQuitModal.value = true
+}
 
-    // 참여 가능한 챌린지에 다시 추가
-    availableChallenges.value.push({
-      id: challenge.id,
-      title: challenge.title,
-      description: challenge.description,
-      startDate: challenge.startDate,
-      endDate: challenge.endDate,
-      participants: Math.floor(Math.random() * 100) + 50
-    })
+const confirmQuit = () => {
+  const challenge = selectedChallenge.value
 
-    displayToast('챌린지를 포기했습니다.')
+  // 참여 중인 챌린지에서 제거
+  const index = myChallenges.value.findIndex(c => c.id === challenge.id)
+  if (index !== -1) {
+    myChallenges.value.splice(index, 1)
   }
+
+  // 참여 가능한 챌린지에 다시 추가
+  availableChallenges.value.push({
+    id: challenge.id,
+    title: challenge.title,
+    description: challenge.description,
+    startDate: challenge.startDate,
+    endDate: challenge.endDate,
+    participants: Math.floor(Math.random() * 100) + 50
+  })
+
+  showQuitModal.value = false
+  displayToast('챌린지를 포기했습니다.')
 }
 </script>
 
 <template>
   <div class="challenge-container">
     <!-- 상단 네비게이션 -->
-    <header class="header">
-      <div class="header-content">
-        <div class="logo" @click="goToMain">
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="20" cy="20" r="18" stroke="#4CAF50" stroke-width="2"/>
-            <path d="M13 20 L18 25 L28 14" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span class="logo-text">냠냠 코치</span>
-        </div>
-
-        <nav class="nav-menu">
-          <router-link to="/main" class="nav-item">대시보드</router-link>
-          <router-link to="/diet" class="nav-item">식단 관리</router-link>
-          <router-link to="/board" class="nav-item">게시판</router-link>
-          <router-link to="/challenge" class="nav-item active">챌린지</router-link>
-          <router-link to="/mypage" class="nav-item">마이페이지</router-link>
-        </nav>
-
-        <div class="user-menu">
-          <span class="username">홍길동님</span>
-          <button @click="handleLogout" class="logout-btn">로그아웃</button>
-        </div>
-      </div>
-    </header>
+    <AppHeader active-page="challenge" />
 
     <!-- 메인 콘텐츠 -->
     <main class="main-content">
@@ -316,27 +287,32 @@ const quitChallenge = (challenge) => {
       </div>
     </div>
 
+    <!-- 포기 확인 모달 -->
+    <div v-if="showQuitModal" class="modal-overlay" @click="showQuitModal = false">
+      <div class="modal-content small-modal" @click.stop>
+        <div class="modal-header">
+          <h2 class="modal-title">챌린지 포기 확인</h2>
+          <button class="modal-close" @click="showQuitModal = false">✕</button>
+        </div>
+        <div class="modal-body" v-if="selectedChallenge">
+          <p class="confirm-message">
+            <strong>{{ selectedChallenge.title }}</strong> 챌린지를 포기하시겠습니까?
+          </p>
+          <p class="confirm-submessage">
+            포기하면 진행 중인 기록이 사라집니다.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="modal-btn cancel-btn" @click="showQuitModal = false">취소</button>
+          <button class="modal-btn quit-btn" @click="confirmQuit">포기하기</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 토스트 메시지 -->
     <div v-if="showToast" class="toast-message">
       <div class="toast-icon">✓</div>
       <span class="toast-text">{{ toastMessage }}</span>
-    </div>
-
-    <!-- 로그아웃 확인 모달 -->
-    <div v-if="showLogoutModal" class="modal-overlay" @click="showLogoutModal = false">
-      <div class="modal-content small-modal" @click.stop>
-        <div class="modal-header">
-          <h2 class="modal-title">로그아웃</h2>
-          <button class="modal-close" @click="showLogoutModal = false">✕</button>
-        </div>
-        <div class="modal-body">
-          <p class="confirm-message">로그아웃 하시겠습니까?</p>
-        </div>
-        <div class="modal-footer">
-          <button class="modal-btn cancel-btn" @click="showLogoutModal = false">취소</button>
-          <button class="modal-btn logout-btn" @click="confirmLogout">로그아웃</button>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -345,85 +321,6 @@ const quitChallenge = (challenge) => {
 .challenge-container {
   min-height: 100vh;
   background-color: #F5F7FA;
-}
-
-/* 헤더 (동일) */
-.header {
-  background: #FFFFFF;
-  border-bottom: 1px solid #E0E0E0;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.header-content {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 16px 40px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-}
-
-.logo-text {
-  font-size: 20px;
-  font-weight: 700;
-  color: #333333;
-}
-
-.nav-menu {
-  display: flex;
-  gap: 32px;
-}
-
-.nav-item {
-  color: #666666;
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.3s ease;
-  padding: 8px 0;
-  border-bottom: 2px solid transparent;
-}
-
-.nav-item:hover,
-.nav-item.active {
-  color: #4CAF50;
-  border-bottom-color: #4CAF50;
-}
-
-.user-menu {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.username {
-  font-size: 14px;
-  color: #333333;
-  font-weight: 500;
-}
-
-.logout-btn {
-  padding: 8px 16px;
-  background: transparent;
-  border: 1px solid #E0E0E0;
-  border-radius: 6px;
-  color: #666666;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.logout-btn:hover {
-  border-color: #4CAF50;
-  color: #4CAF50;
 }
 
 /* 메인 콘텐츠 */
@@ -830,6 +727,18 @@ const quitChallenge = (challenge) => {
   background: #45A049;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.quit-btn {
+  background: #F44336;
+  border: none;
+  color: #FFFFFF;
+}
+
+.quit-btn:hover {
+  background: #D32F2F;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
 }
 
 .logout-btn {
