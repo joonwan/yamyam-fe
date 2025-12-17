@@ -1,31 +1,73 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue' // onMounted 추가
 import { useRouter } from 'vue-router'
 import AppHeader from '@/components/AppHeader.vue'
+import api from '@/util/axios'
 
 const router = useRouter()
 
-// 더미 데이터 - 사용자 정보
+// 1. 사용자 정보 (초기값 비워두기)
 const userInfo = ref({
-  name: '홍길동',
-  nickname: '건강러버',
-  email: 'test@yamyam.com'
+  name: '',
+  nickname: '',
+  email: ''
 })
 
-// 더미 데이터 - 팔로워/팔로잉 수
+// 2. 팔로워/팔로잉 수 (초기값 0)
 const followStats = ref({
-  followers: 4,  // 나를 팔로우하는 사람 수
-  following: 3   // 내가 팔로우하는 사람 수
+  followers: 0, 
+  following: 0  
 })
 
-// 더미 데이터 - 신체 정보 이력
-const bodySpecs = ref([
-  { id: 1, height: 175, weight: 75, age: 28, gender: '남성', date: '2025-01-01' },
-  { id: 2, height: 175, weight: 73, age: 28, gender: '남성', date: '2025-01-08' },
-  { id: 3, height: 175, weight: 72, age: 28, gender: '남성', date: '2025-01-15' },
-  { id: 4, height: 175, weight: 70, age: 28, gender: '남성', date: '2025-01-22' },
-  { id: 5, height: 175, weight: 69, age: 28, gender: '남성', date: '2025-01-29' },
-])
+// 3. 신체 정보 이력 (빈 배열로 시작)
+const bodySpecs = ref([])
+
+// --- [API 통신 함수들] ---
+
+// 내 정보 불러오기 (/api/users/me)
+const fetchUserInfo = async () => {
+  try {
+    const response = await api.get('/api/users/me')
+    const data = response.data
+    
+    // 받아온 데이터 채워넣기
+    userInfo.value = {
+      name: data.name,
+      nickname: data.nickname,
+      email: data.email
+    }
+    
+    // 팔로우 정보도 같이 채우기
+    followStats.value = {
+      followers: data.followers,
+      following: data.following
+    }
+  } catch (error) {
+    console.error('내 정보 로딩 실패:', error)
+    // 401 에러(로그인 안 됨)는 axios 인터셉터가 알아서 처리해주니까 걱정 노노!
+  }
+}
+
+// 신체 정보 목록 불러오기 (/api/body-specs)
+const fetchBodySpecs = async () => {
+  try {
+    const response = await api.get('/api/body-specs')
+    // 백엔드에서 날짜 순서대로 정렬해주면 좋지만, 프론트에서 한 번 더 확실하게 정렬해도 됨
+    bodySpecs.value = response.data.sort((a, b) => new Date(a.date) - new Date(b.date))
+  } catch (error) {
+    console.error('신체 정보 로딩 실패:', error)
+  }
+}
+
+// 페이지가 열리자마자 데이터 가져오기!
+onMounted(async () => {
+  await Promise.all([
+    fetchUserInfo(),
+    fetchBodySpecs()
+  ])
+})
+
+// --- [기존 로직 + API 연결] ---
 
 // 모달 상태
 const showAddModal = ref(false)
@@ -42,12 +84,13 @@ const newBodySpec = ref({
   weight: '',
   age: '',
   gender: '남성',
-  date: new Date().toISOString().split('T')[0]
+  created_at: new Date().toISOString().split('T')[0]
 })
 
-// 최신 신체 정보
+// 최신 신체 정보 (bodySpecs가 바뀌면 자동 업데이트됨)
 const latestBodySpec = computed(() => {
   if (bodySpecs.value.length === 0) return null
+  // 날짜 내림차순 정렬 후 첫 번째꺼
   return [...bodySpecs.value].sort((a, b) => new Date(b.date) - new Date(a.date))[0]
 })
 
@@ -69,11 +112,12 @@ const bmiStatus = computed(() => {
 
 // 그래프 데이터 (최근 10개)
 const chartData = computed(() => {
+  // 날짜 오름차순 정렬 (옛날 -> 최신)
   const sorted = [...bodySpecs.value].sort((a, b) => new Date(a.date) - new Date(b.date))
   return sorted.slice(-10)
 })
 
-// 그래프 관련 계산
+// 그래프 관련 계산 (차트 그리는 로직은 데이터만 들어오면 알아서 작동함)
 const chartWidth = 800
 const chartHeight = 300
 const chartPadding = { top: 20, right: 40, bottom: 60, left: 60 }
@@ -127,48 +171,67 @@ const yAxisTicks = computed(() => {
   return ticks.reverse()
 })
 
-// 신체 정보 추가
-const handleAddBodySpec = () => {
+// ★ 신체 정보 추가 (API 연결)
+const handleAddBodySpec = async () => {
   if (!newBodySpec.value.height || !newBodySpec.value.weight || !newBodySpec.value.age) {
     displayToast('모든 필드를 입력해주세요')
     return
   }
 
-  bodySpecs.value.push({
-    id: Date.now(),
-    height: parseInt(newBodySpec.value.height),
-    weight: parseInt(newBodySpec.value.weight),
-    age: parseInt(newBodySpec.value.age),
-    gender: newBodySpec.value.gender,
-    date: newBodySpec.value.date
-  })
+  try {
+    // 1. 서버에 전송
+    await api.post('/api/body-specs', {
+      height: parseInt(newBodySpec.value.height),
+      weight: parseInt(newBodySpec.value.weight),
+      age: parseInt(newBodySpec.value.age),
+      gender: newBodySpec.value.gender,
+      created_at: newBodySpec.value.created_at
+    })
 
-  showAddModal.value = false
-  newBodySpec.value = {
-    height: '',
-    weight: '',
-    age: '',
-    gender: '남성',
-    date: new Date().toISOString().split('T')[0]
+    // 2. 성공하면 목록 새로고침 (이게 제일 중요! 서버 데이터를 다시 받아옴)
+    await fetchBodySpecs()
+
+    showAddModal.value = false
+    newBodySpec.value = {
+      height: '',
+      weight: '',
+      age: '',
+      gender: '남성',
+      created_at: newBodySpec.value.created_at
+    }
+
+    displayToast('신체 정보가 추가되었습니다')
+  } catch (error) {
+    console.error(error)
+    displayToast('저장 중 오류가 발생했습니다.')
   }
-
-  displayToast('신체 정보가 추가되었습니다')
 }
 
-// 신체 정보 삭제
+// 신체 정보 삭제 모달 열기
 const deleteBodySpec = (id) => {
   deleteTargetId.value = id
   showDeleteModal.value = true
 }
 
-const confirmDelete = () => {
-  const index = bodySpecs.value.findIndex(b => b.id === deleteTargetId.value)
-  if (index !== -1) {
-    bodySpecs.value.splice(index, 1)
-    displayToast('신체 정보가 삭제되었습니다')
+// ★ 신체 정보 삭제 확인 (API 연결)
+const confirmDelete = async () => {
+  if (deleteTargetId.value) {
+    try {
+      // 1. 서버에 삭제 요청
+      await api.delete(`/api/body-specs/${deleteTargetId.value}`)
+      
+      // 2. 성공하면 목록 새로고침
+      await fetchBodySpecs()
+      
+      displayToast('신체 정보가 삭제되었습니다')
+    } catch (error) {
+      console.error(error)
+      displayToast('삭제 중 오류가 발생했습니다.')
+    } finally {
+      showDeleteModal.value = false
+      deleteTargetId.value = null
+    }
   }
-  showDeleteModal.value = false
-  deleteTargetId.value = null
 }
 
 // 토스트
@@ -180,7 +243,7 @@ const displayToast = (message) => {
   }, 3000)
 }
 
-// 모달 열기
+// 모달 열기 (기존 값 채우기)
 const openAddModal = () => {
   if (latestBodySpec.value) {
     newBodySpec.value.height = latestBodySpec.value.height.toString()
@@ -425,7 +488,7 @@ const openAddModal = () => {
             <div class="form-group">
               <label class="form-label">측정일</label>
               <input
-                v-model="newBodySpec.date"
+                v-model="newBodySpec.created_at"
                 type="date"
                 class="form-input"
                 required
