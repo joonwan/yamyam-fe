@@ -1,20 +1,17 @@
 <template>
   <div class="friends-view">
-    <!-- Header -->
     <AppHeader active-page="friends" />
 
-    <!-- Main Content -->
     <main class="main-content">
       <div class="container">
         <h1 class="page-title">친구 검색</h1>
 
-        <!-- Search Box -->
         <div class="search-section">
           <div class="search-box">
             <input
               v-model="searchKeyword"
               type="text"
-              placeholder="이름 또는 닉네임으로 검색"
+              placeholder="이름, 닉네임 또는 이메일로 검색"
               @keyup.enter="searchFriends"
               class="search-input"
             >
@@ -22,7 +19,6 @@
           </div>
         </div>
 
-        <!-- Search Results -->
         <div v-if="searchResults.length > 0" class="results-section">
           <h2 class="section-title">검색 결과 ({{ searchResults.length }}명)</h2>
           <div class="user-list">
@@ -37,16 +33,17 @@
                   <p class="user-meta">{{ user.email }}</p>
                 </div>
               </div>
+              
               <button
-                v-if="isFollowing(user.id)"
-                @click="unfollowUser(user.id)"
+                v-if="user.isFollowing"
+                @click="unfollowUser(user)"
                 class="btn btn-unfollow"
               >
                 언팔로우
               </button>
               <button
                 v-else
-                @click="followUser(user.id)"
+                @click="followUser(user)"
                 class="btn btn-follow"
               >
                 팔로우
@@ -55,18 +52,16 @@
           </div>
         </div>
 
-        <!-- Empty State -->
         <div v-else-if="hasSearched" class="empty-state">
           <p>검색 결과가 없습니다.</p>
         </div>
 
         <div v-else class="empty-state">
-          <p>이름 또는 닉네임을 검색해주세요.</p>
+          <p>이름, 닉네임 또는 이메일을 검색해주세요.</p>
         </div>
       </div>
     </main>
 
-    <!-- Toast Message -->
     <transition name="slideUp">
       <div v-if="showToast" class="toast">
         <span class="toast-icon">✓</span>
@@ -80,6 +75,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppHeader from '@/components/AppHeader.vue'
+import api from '@/util/axios' // ★ 우리가 만든 axios 불러오기
 
 const router = useRouter()
 
@@ -87,54 +83,67 @@ const router = useRouter()
 const searchKeyword = ref('')
 const searchResults = ref([])
 const hasSearched = ref(false)
-const followingIds = ref([2, 5]) // 더미 데이터: 현재 팔로우 중인 사용자 ID
 
 // Toast
 const showToast = ref(false)
 const toastMessage = ref('')
 
-// 더미 사용자 데이터
-const allUsers = [
-  { id: 1, name: '김철수', nickname: 'chulsoo', email: 'chulsoo@yamyam.com' },
-  { id: 2, name: '이영희', nickname: 'younghee', email: 'younghee@yamyam.com' },
-  { id: 3, name: '박지민', nickname: 'jimin', email: 'jimin@yamyam.com' },
-  { id: 4, name: '최민수', nickname: 'minsu', email: 'minsu@yamyam.com' },
-  { id: 5, name: '정수현', nickname: 'suhyun', email: 'suhyun@yamyam.com' },
-  { id: 6, name: '강다은', nickname: 'daeun', email: 'daeun@yamyam.com' },
-  { id: 7, name: '윤서준', nickname: 'seojun', email: 'seojun@yamyam.com' },
-  { id: 8, name: '임하늘', nickname: 'haneul', email: 'haneul@yamyam.com' }
-]
+// [삭제됨] 더미 데이터들 (allUsers, followingIds) 제거!
 
-// Methods
-const searchFriends = () => {
-  hasSearched.value = true
-  const keyword = searchKeyword.value.toLowerCase().trim()
-
+// ★ 친구 검색 (API 연결)
+const searchFriends = async () => {
+  const keyword = searchKeyword.value.trim()
+  
   if (!keyword) {
-    searchResults.value = []
+    displayToast('검색어를 입력해주세요')
     return
   }
 
-  searchResults.value = allUsers.filter(user =>
-    user.name.toLowerCase().includes(keyword) ||
-    user.nickname.toLowerCase().includes(keyword)
-  )
+  try {
+    // GET 요청: /api/users/search?keyword=검색어
+    // 백엔드에서 이름, 닉네임, 이메일 중 하나라도 맞으면 찾아줌
+    const response = await api.get('/api/users/search', {
+      params: { keyword }
+    })
+    
+    // 응답 데이터에 이미 isFollowing(boolean)이 들어있음!
+    searchResults.value = response.data
+    hasSearched.value = true
+  } catch (error) {
+    console.error(error)
+    displayToast('검색 중 오류가 발생했습니다.')
+  }
 }
 
-const isFollowing = (userId) => {
-  return followingIds.value.includes(userId)
+// ★ 팔로우 요청 (API 연결)
+const followUser = async (user) => {
+  try {
+    // POST 요청: /api/follows/{targetId}
+    await api.post(`/api/follows/${user.id}`)
+    
+    // 성공 시 화면 즉시 갱신 (다시 검색할 필요 없음)
+    user.isFollowing = true 
+    displayToast(`${user.name}님을 팔로우했습니다.`)
+  } catch (error) {
+    console.error(error)
+    const errorMsg = error.response?.data || '팔로우 실패'
+    displayToast(errorMsg)
+  }
 }
 
-const followUser = (userId) => {
-  followingIds.value.push(userId)
-  const user = allUsers.find(u => u.id === userId)
-  displayToast(`${user.name}님을 팔로우했습니다.`)
-}
-
-const unfollowUser = (userId) => {
-  followingIds.value = followingIds.value.filter(id => id !== userId)
-  const user = allUsers.find(u => u.id === userId)
-  displayToast(`${user.name}님을 언팔로우했습니다.`)
+// ★ 언팔로우 요청 (API 연결)
+const unfollowUser = async (user) => {
+  try {
+    // DELETE 요청: /api/follows/{targetId}
+    await api.delete(`/api/follows/${user.id}`)
+    
+    // 성공 시 화면 즉시 갱신
+    user.isFollowing = false
+    displayToast(`${user.name}님을 언팔로우했습니다.`)
+  } catch (error) {
+    console.error(error)
+    displayToast('언팔로우 실패')
+  }
 }
 
 const displayToast = (message) => {

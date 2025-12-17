@@ -1,9 +1,7 @@
 <template>
   <div class="following-view">
-    <!-- Header -->
     <AppHeader active-page="" />
 
-    <!-- Main Content -->
     <main class="main-content">
       <div class="container">
         <div class="header-section">
@@ -11,7 +9,6 @@
           <h1 class="page-title">팔로잉</h1>
         </div>
 
-        <!-- Following List -->
         <div v-if="following.length > 0" class="following-section">
           <p class="count-text">{{ following.length }}명 팔로잉</p>
           <div class="user-list">
@@ -27,7 +24,7 @@
                 </div>
               </div>
               <button
-                @click="unfollowUser(user.id)"
+                @click="unfollowUser(user)"
                 class="btn btn-unfollow"
               >
                 언팔로우
@@ -36,14 +33,12 @@
           </div>
         </div>
 
-        <!-- Empty State -->
         <div v-else class="empty-state">
           <p>팔로잉 중인 사용자가 없습니다.</p>
         </div>
       </div>
     </main>
 
-    <!-- Toast Message -->
     <transition name="slideUp">
       <div v-if="showToast" class="toast">
         <span class="toast-icon">✓</span>
@@ -54,28 +49,51 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppHeader from '@/components/AppHeader.vue'
+import api from '@/util/axios' // ★ Axios 가져오기
 
 const router = useRouter()
+
+// State
+const following = ref([]) // 서버에서 받아올 데이터
 
 // Toast
 const showToast = ref(false)
 const toastMessage = ref('')
 
-// 더미 팔로잉 데이터 (내가 팔로우하는 사람들)
-const following = ref([
-  { id: 2, name: '이영희', nickname: 'younghee', email: 'younghee@yamyam.com' },
-  { id: 5, name: '정수현', nickname: 'suhyun', email: 'suhyun@yamyam.com' },
-  { id: 7, name: '윤서준', nickname: 'seojun', email: 'seojun@yamyam.com' }
-])
+// ★ 데이터 불러오기 (API)
+const fetchFollowing = async () => {
+  try {
+    const response = await api.get('/api/follows/following')
+    following.value = response.data
+  } catch (error) {
+    console.error(error)
+    displayToast('팔로잉 목록을 불러오지 못했습니다.')
+  }
+}
 
-// Methods
-const unfollowUser = (userId) => {
-  const user = following.value.find(u => u.id === userId)
-  following.value = following.value.filter(u => u.id !== userId)
-  displayToast(`${user.name}님을 언팔로우했습니다.`)
+// 화면 켜지자마자 실행
+onMounted(() => {
+  fetchFollowing()
+})
+
+// ★ 언팔로우 (API 연결)
+const unfollowUser = async (user) => {
+  if (!confirm(`${user.name}님을 언팔로우 하시겠습니까?`)) return
+
+  try {
+    await api.delete(`/api/follows/${user.id}`)
+    
+    // 성공하면 목록에서 즉시 제거!
+    following.value = following.value.filter(u => u.id !== user.id)
+    
+    displayToast(`${user.name}님을 언팔로우했습니다.`)
+  } catch (error) {
+    console.error(error)
+    displayToast('언팔로우 실패')
+  }
 }
 
 const displayToast = (message) => {

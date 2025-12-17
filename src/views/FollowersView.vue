@@ -1,9 +1,7 @@
 <template>
   <div class="followers-view">
-    <!-- Header -->
     <AppHeader active-page="" />
 
-    <!-- Main Content -->
     <main class="main-content">
       <div class="container">
         <div class="header-section">
@@ -11,7 +9,6 @@
           <h1 class="page-title">팔로워</h1>
         </div>
 
-        <!-- Followers List -->
         <div v-if="followers.length > 0" class="followers-section">
           <p class="count-text">{{ followers.length }}명의 팔로워</p>
           <div class="user-list">
@@ -26,16 +23,17 @@
                   <p class="user-meta">{{ user.email }}</p>
                 </div>
               </div>
+              
               <button
-                v-if="isFollowingBack(user.id)"
-                @click="unfollowUser(user.id)"
+                v-if="user.isFollowing"
+                @click="unfollowUser(user)"
                 class="btn btn-unfollow"
               >
                 언팔로우
               </button>
               <button
                 v-else
-                @click="followUser(user.id)"
+                @click="followUser(user)"
                 class="btn btn-follow"
               >
                 팔로우
@@ -44,14 +42,12 @@
           </div>
         </div>
 
-        <!-- Empty State -->
         <div v-else class="empty-state">
-          <p>팔로워가 없습니다.</p>
+          <p>아직 나를 팔로우하는 사람이 없습니다.</p>
         </div>
       </div>
     </main>
 
-    <!-- Toast Message -->
     <transition name="slideUp">
       <div v-if="showToast" class="toast">
         <span class="toast-icon">✓</span>
@@ -62,42 +58,62 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppHeader from '@/components/AppHeader.vue'
+import api from '@/util/axios' // ★ Axios 가져오기
 
 const router = useRouter()
 
 // State
-const followingBackIds = ref([1, 3]) // 더미 데이터: 맞팔로우 중인 사용자 ID
+const followers = ref([]) // 서버에서 받아올 데이터
 
 // Toast
 const showToast = ref(false)
 const toastMessage = ref('')
 
-// 더미 팔로워 데이터 (나를 팔로우하는 사람들)
-const followers = ref([
-  { id: 1, name: '김철수', nickname: 'chulsoo', email: 'chulsoo@yamyam.com' },
-  { id: 3, name: '박지민', nickname: 'jimin', email: 'jimin@yamyam.com' },
-  { id: 6, name: '강다은', nickname: 'daeun', email: 'daeun@yamyam.com' },
-  { id: 8, name: '임하늘', nickname: 'haneul', email: 'haneul@yamyam.com' }
-])
-
-// Methods
-const isFollowingBack = (userId) => {
-  return followingBackIds.value.includes(userId)
+// ★ 데이터 불러오기 (API)
+const fetchFollowers = async () => {
+  try {
+    const response = await api.get('/api/follows/followers')
+    followers.value = response.data
+  } catch (error) {
+    console.error(error)
+    displayToast('팔로워 목록을 불러오지 못했습니다.')
+  }
 }
 
-const followUser = (userId) => {
-  followingBackIds.value.push(userId)
-  const user = followers.value.find(u => u.id === userId)
-  displayToast(`${user.name}님을 팔로우했습니다.`)
+// 화면 켜지자마자 실행
+onMounted(() => {
+  fetchFollowers()
+})
+
+// ★ 팔로우 (맞팔하기)
+const followUser = async (user) => {
+  try {
+    await api.post(`/api/follows/${user.id}`)
+    
+    // 화면 즉시 갱신
+    user.isFollowing = true
+    displayToast(`${user.name}님을 팔로우했습니다.`)
+  } catch (error) {
+    console.error(error)
+    displayToast('팔로우 실패')
+  }
 }
 
-const unfollowUser = (userId) => {
-  followingBackIds.value = followingBackIds.value.filter(id => id !== userId)
-  const user = followers.value.find(u => u.id === userId)
-  displayToast(`${user.name}님을 언팔로우했습니다.`)
+// ★ 언팔로우 (맞팔 취소)
+const unfollowUser = async (user) => {
+  try {
+    await api.delete(`/api/follows/${user.id}`)
+    
+    // 화면 즉시 갱신
+    user.isFollowing = false
+    displayToast(`${user.name}님을 언팔로우했습니다.`)
+  } catch (error) {
+    console.error(error)
+    displayToast('언팔로우 실패')
+  }
 }
 
 const displayToast = (message) => {
