@@ -51,6 +51,7 @@ const showCreateDailyModal = ref(false);
 const dailyDescription = ref('');
 const isCreatingDaily = ref(false);
 const activeTab = ref('dailyDiet'); // 'dailyDiet' 또는 'trends'
+const currentUserId = ref(localStorage.getItem('userId') || null);
 
 
 // --- Computed ---
@@ -61,6 +62,12 @@ const dateList = computed(() => {
 
 const dailyTotalCalorie = computed(() => {
   return calculateDailyTotalNutrient(dailyDiet.value, 'energyPer100');
+});
+
+// 자신의 식단인지 확인
+const isOwner = computed(() => {
+  if (!dietPlan.value || !currentUserId.value) return false;
+  return dietPlan.value.authorId === parseInt(currentUserId.value);
 });
 
 
@@ -211,7 +218,8 @@ const fetchDietPlan = async () => {
       content: response.data.content,
       startDate: response.data.startDate,
       endDate: response.data.endDate,
-      primary: response.data.primary
+      primary: response.data.primary,
+      authorId: response.data.authorId // 소유자 ID
     };
 
     if (dateList.value.length > 0) {
@@ -387,6 +395,49 @@ const handleBack = () => {
   router.push('/diet');
 };
 
+// 식단 가져오기
+const copyDietPlan = async () => {
+  if (!confirm('이 식단을 내 식단으로 가져오시겠습니까?\n모든 일일 식단과 식사 정보가 복사됩니다.')) {
+    return;
+  }
+
+  try {
+    const response = await dietPlanApi.copy(dietPlan.value.id);
+
+    // 201 Created - 새로 복사된 경우
+    if (response.status === 201) {
+      const location = response.headers.location;
+      const newDietPlanId = location ? location.split('/').pop() : null;
+
+      displayToast('식단이 성공적으로 복사되었습니다!');
+
+      // 복사된 식단 상세 페이지로 이동
+      setTimeout(() => {
+        if (newDietPlanId) {
+          router.push({
+            name: 'diet-plan-detail',
+            query: { id: newDietPlanId }
+          });
+        } else {
+          router.push('/diet');
+        }
+      }, 1000);
+    }
+    // 200 OK - 이미 본인 식단인 경우
+    else if (response.status === 200) {
+      displayToast('이미 본인의 식단입니다.');
+    }
+  } catch (error) {
+    console.error('식단 복사 실패:', error);
+    networkError.value = true;
+    errorMessage.value = error.response?.data?.message || '식단 복사에 실패했습니다.';
+
+    setTimeout(() => {
+      networkError.value = false;
+    }, 3000);
+  }
+};
+
 onMounted(async () => {
   await fetchDietPlan(); // Ensure dietPlan is loaded first
 
@@ -422,11 +473,20 @@ onMounted(async () => {
             <span v-if="dietPlan.primary" class="primary-badge">대표 식단</span>
           </div>
           <div class="header-actions">
-            <button v-if="!dietPlan.primary" class="set-primary-btn" @click="setPrimaryDietPlan">
-              대표 식단으로 설정
-            </button>
-            <button class="update-btn" @click="goToUpdatePage">수정</button>
-            <button class="delete-btn" @click="handleDelete">삭제</button>
+            <!-- 자신의 식단인 경우 -->
+            <template v-if="isOwner">
+              <button v-if="!dietPlan.primary" class="set-primary-btn" @click="setPrimaryDietPlan">
+                대표 식단으로 설정
+              </button>
+              <button class="update-btn" @click="goToUpdatePage">수정</button>
+              <button class="delete-btn" @click="handleDelete">삭제</button>
+            </template>
+            <!-- 다른 사람의 식단인 경우 -->
+            <template v-else>
+              <button class="copy-diet-btn" @click="copyDietPlan">
+                📋 식단 가져오기
+              </button>
+            </template>
           </div>
         </div>
 
@@ -489,7 +549,7 @@ onMounted(async () => {
             <!-- 일일 식단이 없는 경우 -->
             <div v-if="!dailyDiet" class="empty-daily-diet">
               <p class="empty-message">아직 이 날짜의 식단이 생성되지 않았습니다</p>
-              <button class="create-daily-btn" @click="openCreateDailyModal">
+              <button v-if="isOwner" class="create-daily-btn" @click="openCreateDailyModal">
                 일일 식단 생성
               </button>
             </div>
@@ -522,6 +582,7 @@ onMounted(async () => {
                                                     >                                  <div class="meal-header">
                                     <h3 class="meal-title" :style="{ color: getMealColors(mealType.label).main }">{{ mealType.label }}</h3>
                                     <button
+                                      v-if="isOwner"
                                       class="meal-action-btn"
                                       :style="{
                                         color: getMealColors(mealType.label).btnText,
@@ -531,6 +592,18 @@ onMounted(async () => {
                                       @click="goToMealDetail(mealType.value)"
                                     >
                                       {{ dailyDiet[mealType.value.toLowerCase()] ? '상세보기' : '추가' }}
+                                    </button>
+                                    <button
+                                      v-else-if="dailyDiet[mealType.value.toLowerCase()]"
+                                      class="meal-action-btn view-only-btn"
+                                      :style="{
+                                        color: getMealColors(mealType.label).btnText,
+                                        backgroundColor: getMealColors(mealType.label).btnBg,
+                                        '--meal-button-hover-color': getMealColors(mealType.label).btnHoverBg
+                                      }"
+                                      @click="goToMealDetail(mealType.value)"
+                                    >
+                                      보기
                                     </button>
                                   </div>
                   <div v-if="dailyDiet[mealType.value.toLowerCase()]" class="meal-content">
@@ -981,7 +1054,8 @@ onMounted(async () => {
 
 .set-primary-btn,
 .update-btn,
-.delete-btn {
+.delete-btn,
+.copy-diet-btn {
   padding: 10px 20px;
   border-radius: 8px;
   font-size: 14px;
@@ -1018,6 +1092,18 @@ onMounted(async () => {
 .delete-btn:hover {
   background: #F44336;
   color: #FFFFFF;
+}
+
+.copy-diet-btn {
+  background: #E3F2FD;
+  color: #2196F3;
+}
+
+.copy-diet-btn:hover {
+  background: #2196F3;
+  color: #FFFFFF;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
 }
 
 /* 정보 카드 */

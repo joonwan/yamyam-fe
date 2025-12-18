@@ -51,6 +51,13 @@ export const dietPlanApi = {
    */
   delete(dietPlanId) {
     return apiClient.delete(`/api/diet-plans/${dietPlanId}`)
+  },
+
+  /**
+   * 식단 계획 복사
+   */
+  copy(dietPlanId) {
+    return apiClient.post(`/api/diet-plans/${dietPlanId}/copy`)
   }
 }
 

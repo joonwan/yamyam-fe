@@ -23,7 +23,7 @@ const handleLogin = async () => {
 
     // 3. 성공 시 처리 (200 OK)
     console.log('로그인 성공!', response.data)
-    
+
     // 서버에서 받은 토큰과 닉네임 꺼내기
     const { accessToken, nickname } = response.data
 
@@ -31,6 +31,16 @@ const handleLogin = async () => {
     // 나중에 다른 API 요청할 때 이 토큰을 꺼내서 써야 해.
     localStorage.setItem('accessToken', accessToken)
     localStorage.setItem('nickname', nickname)
+
+    // 5. 사용자 ID 가져오기 (권한 체크를 위해 필요)
+    try {
+      const userResponse = await axios.get('http://localhost:8080/api/users/me')
+      const userId = userResponse.data.id
+      localStorage.setItem('userId', userId.toString())
+    } catch (error) {
+      console.error('사용자 정보 조회 실패:', error)
+      // userId 저장에 실패해도 로그인은 계속 진행
+    }
 
     // 환영 메시지 (선택 사항)
     alert(`${nickname}님, 환영합니다! 🥗`)
