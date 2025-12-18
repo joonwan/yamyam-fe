@@ -8,8 +8,8 @@ import MealDetailView from '../views/MealDetailView.vue'
 import CreateDailyDietView from '../views/CreateDailyDietView.vue'
 import DietPlanDetailView from '../views/DietPlanDetailView.vue' // Renamed from EditDietView
 import BoardView from '../views/BoardView.vue'
-import WriteBoardView from '../views/WriteBoardView.vue'
-import BoardDetailView from '../views/BoardDetailView.vue'
+import PostDetailView from '../views/PostDetailView.vue'
+import PostFormView from '../views/PostFormView.vue'
 import ChallengeView from '../views/ChallengeView.vue'
 import MyPageView from '../views/MyPageView.vue'
 import FriendsView from '../views/FriendsView.vue'
@@ -76,13 +76,18 @@ const router = createRouter({
     },
     {
       path: '/board/write',
-      name: 'write-board',
-      component: WriteBoardView
+      name: 'post-write',
+      component: PostFormView
     },
     {
-      path: '/board/detail',
-      name: 'board-detail',
-      component: BoardDetailView
+      path: '/board/edit/:id',
+      name: 'post-edit',
+      component: PostFormView
+    },
+    {
+      path: '/board/:id',
+      name: 'post-detail',
+      component: PostDetailView
     },
     {
       path: '/challenge',
