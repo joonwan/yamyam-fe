@@ -43,6 +43,7 @@ instance.interceptors.response.use(
       
       // 2. 로그인 페이지로 강제 이동 (새로고침 효과)
       // router.push 대신 window.location을 쓰면 페이지가 리프레시되면서 상태가 확실히 초기화됨
+      alert('로그인 유효 시간이 만료되었습니다.\n다시 로그인해 주세요.')
       window.location.href = '/login'
     }
     return Promise.reject(error)
