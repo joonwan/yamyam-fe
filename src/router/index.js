@@ -12,9 +12,10 @@ import PostDetailView from '../views/PostDetailView.vue'
 import PostFormView from '../views/PostFormView.vue'
 import ChallengeView from '../views/ChallengeView.vue'
 import ChallengeDetailView from '../views/ChallengeDetailView.vue'
-import ChallengeListView from '@/views/ChallengeListView.vue'
+import ChallengeListView from '../views/ChallengeListView.vue'
 import FriendsView from '../views/FriendsView.vue'
 import UserProfileView from '../views/UserProfileView.vue'
+import YamyamAIView from '../views/YamyamAIView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -117,6 +118,11 @@ const router = createRouter({
       path: '/follow',
       name: 'Follow',
       component: () => import('@/views/FollowView.vue')
+    },
+    {
+      path: '/ai',
+      name: 'yamyam_AI',
+      component: () => YamyamAIView
     }
   ]
 })
