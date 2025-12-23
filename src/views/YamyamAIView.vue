@@ -18,6 +18,7 @@ const myUserInfo = ref(null)
 const myBodySpecs = ref([])     // 신체 정보 리스트
 const myDietPlans = ref([])     // 식단 계획 리스트
 const currentPlanDailyDiets = ref([]) // 선택된 식단 계획의 일일 식단 리스트
+const currentDailyDietFoods = ref([]) // 선택된 일일 식단의 음식 목록
 const myChallenges = ref([])    // 챌린지 리스트
 
 // 첨부 상태 (선택된 ID 목록)
@@ -34,6 +35,7 @@ const modals = ref({
   challenge: false
 })
 const selectedPlanId = ref(null) // 식단 모달에서 현재 보고 있는 계획 ID
+const selectedDailyDietId = ref(null) // 선택된 일일 식단 ID
 
 const showSidebar = ref(true)
 
@@ -50,13 +52,16 @@ const fetchBasicData = async () => {
     const bodyRes = await api.get('/api/body-specs')
     myBodySpecs.value = bodyRes.data.sort((a, b) => new Date(b.date) - new Date(a.date))
 
-    // 3. 식단 계획 목록 조회 (/api/diet-plans/my)
-    const planRes = await api.get('/api/diet-plans/my')
+    // 3. 식단 계획 목록 조회 (/api/diet-plans/my/details) - 상세 정보 포함
+    const planRes = await api.get('/api/diet-plans/my/details')
+    
+    console.log(planRes);
+
     // 배열이 아니라 단일 객체로 올 수도 있으므로 배열로 변환 처리
     if (Array.isArray(planRes.data)) {
-      myDietPlans.value = planRes.data
+      myDietPlans.value = JSON.parse(JSON.stringify(planRes.data))
     } else if (planRes.data) {
-      myDietPlans.value = [planRes.data]
+      myDietPlans.value = [JSON.parse(JSON.stringify(planRes.data))]
     }
 
     // 4. 챌린지 목록
@@ -68,17 +73,79 @@ const fetchBasicData = async () => {
 }
 
 // 식단 계획 클릭 시 해당 계획의 일일 식단 목록 가져오기
-const fetchDailyDietsByPlan = async (planId) => {
+const fetchDailyDietsByPlan = (planId) => {
   selectedPlanId.value = planId
+  selectedDailyDietId.value = null // 일일 식단 선택 초기화
   currentPlanDailyDiets.value = [] // 초기화
-  try {
-    // [API 가정] 특정 식단 계획에 속한 일일 식단 목록 조회
-    // 만약 백엔드 엔드포인트가 다르다면 수정 필요 (예: /api/daily-diets?dietPlanId=${planId})
-    const res = await api.get(`/api/daily-diets`, { params: { dietPlanId: planId } })
-    currentPlanDailyDiets.value = res.data.sort((a, b) => new Date(b.date) - new Date(a.date))
-  } catch (e) {
-    console.error('일일 식단 조회 실패', e)
-    // 데이터가 없을 경우 빈 배열
+  currentDailyDietFoods.value = [] // 음식 목록 초기화
+
+  const selectedPlan = myDietPlans.value.find(p => (p.dietPlanId || p.id) === planId)
+  if (selectedPlan && selectedPlan.dailyDiets) {
+    const dailyDiets = [...selectedPlan.dailyDiets].sort((a, b) => new Date(b.date) - new Date(a.date))
+    currentPlanDailyDiets.value = dailyDiets
+  }
+}
+
+// 식단 계획의 전체 선택/해제
+const togglePlanSelection = (planId) => {
+  const selectedPlan = myDietPlans.value.find(p => (p.dietPlanId || p.id) === planId)
+  if (selectedPlan && selectedPlan.dailyDiets) {
+    const allDailyDietIds = selectedPlan.dailyDiets.map(d => d.dailyDietId || d.id)
+
+    // 현재 선택된 식단 중 이 계획에 속한 것들이 있는지 확인
+    const selectedInThisPlan = attachments.value.diet.filter(id => allDailyDietIds.includes(id))
+
+    // 이미 모두 선택되어 있으면 전체 해제, 아니면 전체 선택
+    if (selectedInThisPlan.length === allDailyDietIds.length && allDailyDietIds.length > 0) {
+      // 이 계획의 식단들만 해제
+      attachments.value.diet = attachments.value.diet.filter(id => !allDailyDietIds.includes(id))
+    } else {
+      // 이 계획의 식단들을 모두 추가 (중복 방지)
+      const newSelection = new Set([...attachments.value.diet, ...allDailyDietIds])
+      attachments.value.diet = Array.from(newSelection)
+    }
+  }
+}
+
+// 식단 계획이 전체 선택되어 있는지 확인
+const isPlanFullySelected = (planId) => {
+  const selectedPlan = myDietPlans.value.find(p => (p.dietPlanId || p.id) === planId)
+  if (selectedPlan && selectedPlan.dailyDiets && selectedPlan.dailyDiets.length > 0) {
+    const allDailyDietIds = selectedPlan.dailyDiets.map(d => d.dailyDietId || d.id)
+    const selectedInThisPlan = attachments.value.diet.filter(id => allDailyDietIds.includes(id))
+    return selectedInThisPlan.length === allDailyDietIds.length
+  }
+  return false
+}
+
+// 일일 식단 클릭 시 해당 식단의 음식 목록 가져오기
+const fetchFoodsByDailyDiet = (dailyDietId) => {
+  selectedDailyDietId.value = dailyDietId
+  currentDailyDietFoods.value = [] // 초기화
+
+  const selectedDiet = currentPlanDailyDiets.value.find(d => (d.dailyDietId || d.id) === dailyDietId)
+  if (selectedDiet) {
+    const foods = []
+    const mealTypes = [
+      { key: 'breakfast', label: '아침', icon: '🍳' },
+      { key: 'lunch', label: '점심', icon: '🍱' },
+      { key: 'dinner', label: '저녁', icon: '🍽️' },
+      { key: 'snack', label: '간식', icon: '🍪' }
+    ]
+
+    mealTypes.forEach(mealType => {
+      if (selectedDiet[mealType.key] && selectedDiet[mealType.key].mealFoods) {
+        selectedDiet[mealType.key].mealFoods.forEach(food => {
+          foods.push({
+            ...food,
+            mealType: mealType.label,
+            mealIcon: mealType.icon
+          })
+        })
+      }
+    })
+
+    currentDailyDietFoods.value = foods
   }
 }
 
@@ -158,13 +225,26 @@ const contextString = computed(() => {
 })
 
 const calculateTotalCal = (diet) => {
-  let total = 0
-  ['breakfast', 'lunch', 'dinner', 'snack'].forEach(type => {
-    if (diet[type] && diet[type].mealFoods) {
-      total += diet[type].mealFoods.reduce((sum, f) => sum + (f.quantity/100 * f.energyPer100), 0)
+  try {
+    if (!diet) return 0
+    let total = 0
+    const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack']
+
+    for (const type of mealTypes) {
+      if (diet[type] && diet[type].mealFoods && Array.isArray(diet[type].mealFoods)) {
+        const mealTotal = diet[type].mealFoods.reduce((sum, f) => {
+          const energy = f.energyPer100 || 0
+          const quantity = f.quantity || 0
+          return sum + (quantity / 100 * energy)
+        }, 0)
+        total += mealTotal
+      }
     }
-  })
-  return Math.round(total)
+    return Math.round(total)
+  } catch (error) {
+    console.error('calculateTotalCal 오류:', error, diet)
+    return 0
+  }
 }
 
 // 추천 질문
@@ -347,12 +427,12 @@ onMounted(() => {
     </div>
 
     <div v-if="modals.diet" class="modal-overlay" @click="modals.diet = false">
-      <div class="modal-content large" @click.stop>
+      <div class="modal-content xlarge" @click.stop>
         <div class="modal-header">
           <h3>식단 정보 선택</h3>
           <button class="close-btn" @click="modals.diet = false">✕</button>
         </div>
-        <div class="modal-body diet-layout">
+        <div class="modal-body diet-layout-3col">
           <div class="plan-list">
             <h4>📁 식단 계획 목록</h4>
             <div class="scroll-box">
@@ -360,29 +440,59 @@ onMounted(() => {
                    class="plan-item"
                    :class="{ selected: selectedPlanId === (plan.dietPlanId || plan.id) }"
                    @click="fetchDailyDietsByPlan(plan.dietPlanId || plan.id)">
-                <span class="plan-name">{{ plan.dietPlanName || plan.currentWeight + 'kg 목표' }}</span>
-                <span class="plan-date">{{ plan.targetDate }}까지</span>
+                <div class="plan-info">
+                  <span class="plan-name">{{ plan.title || '제목 없음' }}</span>
+                  <span class="plan-date">{{ plan.startDate }} ~ {{ plan.endDate }}</span>
+                </div>
+                <div class="checkbox" :class="{ checked: isPlanFullySelected(plan.dietPlanId || plan.id) }"
+                     @click.stop="togglePlanSelection(plan.dietPlanId || plan.id)"></div>
               </div>
               <div v-if="myDietPlans.length === 0" class="empty-msg">식단 계획이 없습니다.</div>
             </div>
           </div>
           <div class="daily-list">
             <h4>📅 일일 식단 목록</h4>
-            <div class="list-actions" v-if="currentPlanDailyDiets.length > 0">
-               <button @click="toggleAll('diet', currentPlanDailyDiets)">현재 목록 전체 선택</button>
-            </div>
+            <!-- <div class="list-actions" v-if="currentPlanDailyDiets.length > 0">
+               <button @click="toggleAll('diet', currentPlanDailyDiets)">전체 선택</button>
+            </div> -->
             <div class="scroll-box">
               <div v-if="!selectedPlanId" class="empty-msg center">좌측에서 식단 계획을 선택해주세요.</div>
               <div v-else-if="currentPlanDailyDiets.length === 0" class="empty-msg center">해당 계획에 등록된 식단이 없습니다.</div>
               <div v-else v-for="diet in currentPlanDailyDiets" :key="diet.dailyDietId || diet.id"
-                   class="select-item"
-                   :class="{ active: attachments.diet.includes(diet.dailyDietId || diet.id) }"
-                   @click="toggleSelection('diet', diet.dailyDietId || diet.id)">
-                <div class="diet-info">
-                  <span class="diet-date">{{ diet.date }}</span>
+                   class="daily-item"
+                   :class="{ selected: selectedDailyDietId === (diet.dailyDietId || diet.id), active: attachments.diet.includes(diet.dailyDietId || diet.id) }"
+                   @click="fetchFoodsByDailyDiet(diet.dailyDietId || diet.id)">
+                <div class="daily-info">
+                  <div class="daily-header">
+                    <span class="diet-date">{{ diet.date }}</span>
+                    <span class="diet-day">{{ diet.dayOfWeek }}</span>
+                  </div>
                   <span class="diet-cal">총 {{ calculateTotalCal(diet) }}kcal</span>
                 </div>
-                <div class="checkbox" :class="{ checked: attachments.diet.includes(diet.dailyDietId || diet.id) }"></div>
+                <div class="checkbox" :class="{ checked: attachments.diet.includes(diet.dailyDietId || diet.id) }"
+                     @click.stop="toggleSelection('diet', diet.dailyDietId || diet.id)"></div>
+              </div>
+            </div>
+          </div>
+          <div class="food-list">
+            <h4>🍽️ 음식 목록</h4>
+            <div class="scroll-box">
+              <div v-if="!selectedDailyDietId" class="empty-msg center">좌측에서 일일 식단을 선택해주세요.</div>
+              <div v-else-if="currentDailyDietFoods.length === 0" class="empty-msg center">등록된 음식이 없습니다.</div>
+              <div v-else v-for="(food, idx) in currentDailyDietFoods" :key="idx" class="food-item">
+                <div class="food-header">
+                  <span class="meal-badge">{{ food.mealIcon }} {{ food.mealType }}</span>
+                  <span class="food-name">{{ food.foodName }}</span>
+                </div>
+                <div class="food-details">
+                  <span class="food-quantity">{{ food.quantity }}{{ food.unit }}</span>
+                  <span class="food-energy">{{ Math.round(food.quantity / 100 * food.energyPer100) }}kcal</span>
+                </div>
+                <div class="food-nutrients">
+                  <span v-if="food.proteinPer100">단백질 {{ Math.round(food.quantity / 100 * food.proteinPer100) }}g</span>
+                  <span v-if="food.carbohydratePer100">탄수화물 {{ Math.round(food.quantity / 100 * food.carbohydratePer100) }}g</span>
+                  <span v-if="food.fatPer100">지방 {{ Math.round(food.quantity / 100 * food.fatPer100) }}g</span>
+                </div>
               </div>
             </div>
           </div>
@@ -434,7 +544,7 @@ onMounted(() => {
 .chat-section { flex: 1; display: flex; flex-direction: column; position: relative; }
 .chat-header { padding: 16px 24px; background: white; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
 .chat-header h2 { font-size: 18px; font-weight: 700; margin: 0; color: #333; }
-.sidebar-toggle { padding: 6px 12px; border: 1px solid #ddd; background: white; border-radius: 20px; cursor: pointer; font-size: 13px; }
+.sidebar-toggle { padding: 6px 12px; border: 1px solid #ddd; background: white; border-radius: 20px; cursor: pointer; font-size: 13px; color: #333; white-space: nowrap; }
 .chat-window { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; background: #f0f2f5; }
 .message-row { display: flex; gap: 10px; max-width: 80%; }
 .message-row.user { align-self: flex-end; flex-direction: row-reverse; }
@@ -465,7 +575,10 @@ textarea:focus { border-color: #4CAF50; }
 /* ========================================= */
 /* 사이드바 (카드형 디자인) */
 /* ========================================= */
-.data-sidebar { width: 340px; background: white; border-left: 1px solid #eee; display: flex; flex-direction: column; z-index: 10; box-shadow: -2px 0 10px rgba(0,0,0,0.05); }
+.data-sidebar { width: 340px; background: white; border-left: 1px solid #eee; display: flex; flex-direction: column; z-index: 10; box-shadow: -2px 0 10px rgba(0,0,0,0.05); transition: transform 0.3s ease-in-out; }
+.slide-right-enter-active, .slide-right-leave-active { transition: transform 0.3s ease-in-out; }
+.slide-right-enter-from { transform: translateX(100%); }
+.slide-right-leave-to { transform: translateX(100%); }
 .sidebar-header { padding: 20px; border-bottom: 1px solid #eee; }
 .sidebar-header h3 { margin: 0 0 4px; font-size: 18px; }
 .sidebar-desc { margin: 0; color: #888; font-size: 13px; }
@@ -492,6 +605,7 @@ textarea:focus { border-color: #4CAF50; }
 .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
 .modal-content { background: white; width: 400px; max-height: 80vh; border-radius: 16px; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
 .modal-content.large { width: 700px; height: 70vh; }
+.modal-content.xlarge { width: 90vw; max-width: 1200px; height: 80vh; }
 
 .modal-header { padding: 16px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
 .modal-header h3 { margin: 0; font-size: 18px; }
@@ -502,7 +616,13 @@ textarea:focus { border-color: #4CAF50; }
 .diet-layout .plan-list { width: 40%; border-right: 1px solid #eee; display: flex; flex-direction: column; background: #f9f9f9; }
 .diet-layout .daily-list { width: 60%; display: flex; flex-direction: column; }
 
+.diet-layout-3col { flex-direction: row; gap: 0; padding: 0; }
+.diet-layout-3col .plan-list { width: 30%; border-right: 1px solid #eee; display: flex; flex-direction: column; background: #f9f9f9; }
+.diet-layout-3col .daily-list { width: 35%; border-right: 1px solid #eee; display: flex; flex-direction: column; background: #fafafa; }
+.diet-layout-3col .food-list { width: 35%; display: flex; flex-direction: column; background: white; }
+
 .diet-layout h4 { padding: 15px; margin: 0; background: #f0f0f0; border-bottom: 1px solid #eee; font-size: 14px; color: #666; }
+.diet-layout-3col h4 { padding: 15px; margin: 0; background: #f0f0f0; border-bottom: 1px solid #eee; font-size: 14px; color: #666; }
 .scroll-box { overflow-y: auto; flex: 1; }
 
 .list-actions { padding-bottom: 10px; text-align: right; }
@@ -515,17 +635,24 @@ textarea:focus { border-color: #4CAF50; }
 .select-item.active { border-color: #4CAF50; background: #E8F5E9; }
 
 /* Plan Item */
-.plan-item { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s; }
+.plan-item { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s; display: flex; justify-content: space-between; align-items: center; }
 .plan-item:hover { background: #e0e0e0; }
 .plan-item.selected { background: #fff; border-left: 4px solid #4CAF50; }
-.plan-name { display: block; font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+.plan-info { display: flex; flex-direction: column; flex: 1; }
+.plan-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
 .plan-date { font-size: 12px; color: #888; }
 
 /* Diet Daily Item */
 .daily-list .select-item { margin: 10px; }
-.diet-info { display: flex; flex-direction: column; }
-.diet-date { font-weight: 600; font-size: 14px; }
-.diet-cal { font-size: 12px; color: #666; }
+.daily-item { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s; display: flex; justify-content: space-between; align-items: center; }
+.daily-item:hover { background: #e8e8e8; }
+.daily-item.selected { background: #fff; border-left: 4px solid #4CAF50; }
+.daily-item.active { background: #E8F5E9; }
+.daily-info { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.daily-header { display: flex; align-items: center; gap: 8px; }
+.diet-date { font-weight: 600; font-size: 14px; color: #333; }
+.diet-day { font-size: 12px; color: #888; background: #f5f5f5; padding: 2px 8px; border-radius: 10px; }
+.diet-cal { font-size: 12px; color: #4CAF50; font-weight: 600; }
 
 .challenge-info { display: flex; flex-direction: column; }
 .ch-name { font-weight: 600; font-size: 14px; }
@@ -534,6 +661,17 @@ textarea:focus { border-color: #4CAF50; }
 .checkbox { width: 20px; height: 20px; border: 2px solid #ddd; border-radius: 50%; position: relative; }
 .checkbox.checked { background: #4CAF50; border-color: #4CAF50; }
 .checkbox.checked::after { content: '✔'; color: white; font-size: 12px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+/* Food Item */
+.food-item { padding: 12px; margin: 10px; background: #f9f9f9; border-radius: 8px; border: 1px solid #eee; }
+.food-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.meal-badge { font-size: 11px; background: #fff; padding: 3px 8px; border-radius: 12px; border: 1px solid #ddd; white-space: nowrap; }
+.food-name { font-weight: 600; font-size: 14px; color: #333; }
+.food-details { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; }
+.food-quantity { color: #666; }
+.food-energy { color: #4CAF50; font-weight: 600; }
+.food-nutrients { display: flex; gap: 8px; flex-wrap: wrap; font-size: 11px; color: #888; }
+.food-nutrients span { background: #fff; padding: 2px 6px; border-radius: 4px; }
 
 .empty-msg { padding: 20px; text-align: center; color: #aaa; font-size: 13px; }
 .empty-msg.center { display: flex; align-items: center; justify-content: center; height: 100%; }
