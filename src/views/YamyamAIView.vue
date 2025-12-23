@@ -72,6 +72,17 @@ const fetchBasicData = async () => {
   }
 }
 
+// 일일 식단에 음식이 있는지 확인하는 함수
+const hasMealFoods = (diet) => {
+  const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack']
+  return mealTypes.some(type =>
+    diet[type] &&
+    diet[type].mealFoods &&
+    Array.isArray(diet[type].mealFoods) &&
+    diet[type].mealFoods.length > 0
+  )
+}
+
 // 식단 계획 클릭 시 해당 계획의 일일 식단 목록 가져오기
 const fetchDailyDietsByPlan = (planId) => {
   selectedPlanId.value = planId
@@ -81,7 +92,10 @@ const fetchDailyDietsByPlan = (planId) => {
 
   const selectedPlan = myDietPlans.value.find(p => (p.dietPlanId || p.id) === planId)
   if (selectedPlan && selectedPlan.dailyDiets) {
-    const dailyDiets = [...selectedPlan.dailyDiets].sort((a, b) => new Date(b.date) - new Date(a.date))
+    // 음식이 있는 일일 식단만 필터링
+    const dailyDiets = [...selectedPlan.dailyDiets]
+      .filter(diet => hasMealFoods(diet))
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
     currentPlanDailyDiets.value = dailyDiets
   }
 }
