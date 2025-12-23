@@ -25,10 +25,10 @@
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon">🆕</div>
+            <div class="stat-icon">🏆</div>
             <div class="stat-info">
-              <span class="stat-label">참여 가능</span>
-              <span class="stat-value">{{ availableChallenges.length }}개</span>
+              <span class="stat-label">성공한 챌린지</span>
+              <span class="stat-value">{{ successCount }}개</span>
             </div>
           </div>
         </div>
@@ -207,6 +207,10 @@ const averageProgress = computed(() => {
   if (myChallenges.value.length === 0) return 0
   const total = myChallenges.value.reduce((sum, c) => sum + (c.progress || 0), 0)
   return Math.round(total / myChallenges.value.length)
+})
+
+const successCount = computed(() => {
+  return myChallenges.value.filter(c => c.progress === 100).length
 })
 
 // Helper

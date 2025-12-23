@@ -100,18 +100,26 @@ const calendarDays = computed(() => {
   if (!challenge.value) return []
   
   const days = []
+  // 문자열을 바로 Date로 만들면 로컬 시간으로 인식됨
   let current = new Date(challenge.value.startDate)
   const end = new Date(challenge.value.endDate)
   
   while (current <= end) {
-    const dateStr = current.toISOString().split('T')[0]
+    // [수정 포인트] toISOString() 대신 로컬 시간 기준으로 날짜 문자열 생성
+    const year = current.getFullYear()
+    const month = String(current.getMonth() + 1).padStart(2, '0')
+    const day = String(current.getDate()).padStart(2, '0')
+    const dateStr = `${year}-${month}-${day}`
+    
     days.push({
       date: dateStr,
       isSuccess: successDates.value.includes(dateStr),
       isToday: dateStr === today,
       isFuture: dateStr > today,
-      isPast: dateStr < today // 과거 여부 추가
+      isPast: dateStr < today 
     })
+    
+    // 하루 더하기
     current.setDate(current.getDate() + 1)
   }
   return days
