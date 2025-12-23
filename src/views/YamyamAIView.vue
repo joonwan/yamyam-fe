@@ -104,30 +104,36 @@ const fetchDailyDietsByPlan = (planId) => {
 const togglePlanSelection = (planId) => {
   const selectedPlan = myDietPlans.value.find(p => (p.dietPlanId || p.id) === planId)
   if (selectedPlan && selectedPlan.dailyDiets) {
-    const allDailyDietIds = selectedPlan.dailyDiets.map(d => d.dailyDietId || d.id)
+    // 음식이 있는 일일 식단만 필터링
+    const validDailyDiets = selectedPlan.dailyDiets.filter(diet => hasMealFoods(diet))
+    const validDailyDietIds = validDailyDiets.map(d => d.dailyDietId || d.id)
 
     // 현재 선택된 식단 중 이 계획에 속한 것들이 있는지 확인
-    const selectedInThisPlan = attachments.value.diet.filter(id => allDailyDietIds.includes(id))
+    const selectedInThisPlan = attachments.value.diet.filter(id => validDailyDietIds.includes(id))
 
     // 이미 모두 선택되어 있으면 전체 해제, 아니면 전체 선택
-    if (selectedInThisPlan.length === allDailyDietIds.length && allDailyDietIds.length > 0) {
+    if (selectedInThisPlan.length === validDailyDietIds.length && validDailyDietIds.length > 0) {
       // 이 계획의 식단들만 해제
-      attachments.value.diet = attachments.value.diet.filter(id => !allDailyDietIds.includes(id))
+      attachments.value.diet = attachments.value.diet.filter(id => !validDailyDietIds.includes(id))
     } else {
       // 이 계획의 식단들을 모두 추가 (중복 방지)
-      const newSelection = new Set([...attachments.value.diet, ...allDailyDietIds])
+      const newSelection = new Set([...attachments.value.diet, ...validDailyDietIds])
       attachments.value.diet = Array.from(newSelection)
     }
   }
 }
 
-// 식단 계획이 전체 선택되어 있는지 확인
+// 식단 계획이 전체 선택되어 있는지 확인 (음식이 있는 일일 식단 기준)
 const isPlanFullySelected = (planId) => {
   const selectedPlan = myDietPlans.value.find(p => (p.dietPlanId || p.id) === planId)
   if (selectedPlan && selectedPlan.dailyDiets && selectedPlan.dailyDiets.length > 0) {
-    const allDailyDietIds = selectedPlan.dailyDiets.map(d => d.dailyDietId || d.id)
-    const selectedInThisPlan = attachments.value.diet.filter(id => allDailyDietIds.includes(id))
-    return selectedInThisPlan.length === allDailyDietIds.length
+    // 음식이 있는 일일 식단만 필터링
+    const validDailyDiets = selectedPlan.dailyDiets.filter(diet => hasMealFoods(diet))
+    if (validDailyDiets.length === 0) return false
+
+    const validDailyDietIds = validDailyDiets.map(d => d.dailyDietId || d.id)
+    const selectedInThisPlan = attachments.value.diet.filter(id => validDailyDietIds.includes(id))
+    return selectedInThisPlan.length === validDailyDietIds.length
   }
   return false
 }
