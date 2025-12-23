@@ -42,14 +42,37 @@ const activeFoodIndex = ref(null)
 let searchTimeout = null
 
 // 계산된 값
-const totalCalorie = computed(() => {
-  return mealFoods.value.reduce((sum, food) => {
+const totalNutrients = computed(() => {
+  const totals = {
+    calorie: 0,
+    protein: 0,
+    carbs: 0,
+    fat: 0,
+    sugar: 0,
+    sodium: 0
+  }
+
+  mealFoods.value.forEach(food => {
     const quantity = Number(food.quantity)
-    if (food.foodId && quantity > 0 && food.energyPer100) {
-      return sum + (food.energyPer100 * quantity / 100)
+    if (food.foodId && quantity > 0) {
+      const multiplier = quantity / 100
+      totals.calorie += (food.energyPer100 || 0) * multiplier
+      totals.protein += (food.proteinPer100 || 0) * multiplier
+      totals.carbs += (food.carbohydratePer100 || 0) * multiplier
+      totals.fat += (food.fatPer100 || 0) * multiplier
+      totals.sugar += (food.sugarPer100 || 0) * multiplier
+      totals.sodium += (food.sodiumPer100 || 0) * multiplier
     }
-    return sum
-  }, 0)
+  })
+
+  return {
+    calorie: Math.round(totals.calorie),
+    protein: Math.round(totals.protein * 10) / 10,
+    carbs: Math.round(totals.carbs * 10) / 10,
+    fat: Math.round(totals.fat * 10) / 10,
+    sugar: Math.round(totals.sugar * 10) / 10,
+    sodium: Math.round(totals.sodium)
+  }
 })
 
 // 각 음식별 영양소 데이터 (표용)
@@ -330,9 +353,23 @@ onUnmounted(() => {
         </div>
 
         <div v-if="!isLoading" class="form-card">
-          <div class="calorie-summary">
-            <span class="calorie-label">총 칼로리</span>
-            <span class="calorie-value">{{ Math.round(totalCalorie) }} kcal</span>
+          <div class="nutrient-summary">
+            <div class="summary-item calorie">
+              <span class="summary-label">총 칼로리</span>
+              <span class="summary-value">{{ totalNutrients.calorie }} kcal</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">탄수화물</span>
+              <span class="summary-value">{{ totalNutrients.carbs }} g</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">단백질</span>
+              <span class="summary-value">{{ totalNutrients.protein }} g</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">지방</span>
+              <span class="summary-value">{{ totalNutrients.fat }} g</span>
+            </div>
           </div>
 
           <div class="food-list-section">
@@ -454,7 +491,7 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <div v-if="mealFoods.length > 0 && totalCalorie === 0" class="nutrition-table-section no-data-section">
+                    <div v-if="mealFoods.length > 0 && totalNutrients.calorie === 0" class="nutrition-table-section no-data-section">
             <h2 class="section-label">각 음식별 영양소</h2>
             <p class="chart-message">선택된 음식에 영양소 정보가 없어 표를 표시할 수 없습니다.</p>
           </div>
@@ -530,28 +567,55 @@ onUnmounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.calorie-summary {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
+.nutrient-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 20px;
   background: linear-gradient(135deg, #4CAF50 0%, #45A049 100%);
   border-radius: 12px;
+  padding: 24px;
   margin-bottom: 32px;
+  color: #FFFFFF;
 }
 
-.calorie-label {
-  font-size: 16px;
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.summary-item.calorie {
+  grid-column: 1 / -1; /* 칼로리 항목이 전체 너비를 차지하도록 설정 */
+  font-size: 28px;
+  font-weight: 700;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.summary-label {
+  font-size: 14px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.9);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  margin-bottom: 8px;
 }
 
-.calorie-value {
-  font-size: 28px;
+.summary-value {
+  font-size: 22px;
   font-weight: 700;
-  color: #FFFFFF;
+}
+
+.summary-item.calorie .summary-label {
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+.summary-item.calorie .summary-value {
+  font-size: 36px;
 }
 
 /* 영양소 표 스타일 */
